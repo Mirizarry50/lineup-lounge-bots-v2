@@ -1,0 +1,11 @@
+CREATE TABLE IF NOT EXISTS odds_history(id INTEGER PRIMARY KEY, sport TEXT NOT NULL, quote_id TEXT NOT NULL, event_id TEXT NOT NULL, captured_at TEXT NOT NULL, odds_updated TEXT NOT NULL, snapshot TEXT NOT NULL, UNIQUE(quote_id,odds_updated,snapshot));
+CREATE TABLE IF NOT EXISTS analysis_results(id INTEGER PRIMARY KEY, owner TEXT NOT NULL, sport TEXT NOT NULL, created_at TEXT NOT NULL, model_version TEXT NOT NULL, snapshot TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS results(analysis_id INTEGER PRIMARY KEY REFERENCES analysis_results(id), outcome TEXT NOT NULL CHECK(outcome IN ('win','loss','push','void')), source_url TEXT NOT NULL, graded_by TEXT NOT NULL, graded_at TEXT NOT NULL, closing_odds REAL);
+CREATE TABLE IF NOT EXISTS player_td_stats(player_id TEXT NOT NULL, player_name TEXT NOT NULL, team TEXT NOT NULL, season INTEGER NOT NULL, games_played INTEGER, total_tds INTEGER, rush_tds INTEGER, receiving_tds INTEGER, games_with_td INTEGER, td_game_rate REAL, red_zone_touches INTEGER, goal_line_carries INTEGER, red_zone_targets INTEGER, snap_pct REAL, routes INTEGER, targets INTEGER, carries INTEGER, avg_td_odds REAL, last_updated TEXT NOT NULL, source_url TEXT NOT NULL, PRIMARY KEY(player_id,season));
+CREATE TABLE IF NOT EXISTS player_td_games(player_id TEXT NOT NULL,season INTEGER NOT NULL,event_id TEXT NOT NULL,game_date TEXT NOT NULL,tds INTEGER NOT NULL,source_url TEXT NOT NULL,PRIMARY KEY(player_id,season,event_id));
+CREATE TABLE IF NOT EXISTS league_groups(group_key TEXT PRIMARY KEY,role_id TEXT,channel_id TEXT);
+CREATE TABLE IF NOT EXISTS league_members(user_id TEXT PRIMARY KEY,group_key TEXT NOT NULL REFERENCES league_groups(group_key));
+CREATE TABLE IF NOT EXISTS weeks(id TEXT PRIMARY KEY,deadline TEXT NOT NULL,locked INTEGER NOT NULL DEFAULT 0,allowed_market TEXT NOT NULL DEFAULT 'any');
+CREATE TABLE IF NOT EXISTS league_picks(week_id TEXT NOT NULL REFERENCES weeks(id),user_id TEXT NOT NULL,group_key TEXT NOT NULL,snapshot TEXT NOT NULL,submitted_at TEXT NOT NULL,PRIMARY KEY(week_id,user_id));
+CREATE TABLE IF NOT EXISTS parlays(id INTEGER PRIMARY KEY,owner TEXT NOT NULL,created_at TEXT NOT NULL,style TEXT NOT NULL,snapshot TEXT NOT NULL);
+CREATE TABLE IF NOT EXISTS consensus_tickets(week_id TEXT NOT NULL,group_key TEXT NOT NULL,snapshot TEXT NOT NULL,message_id TEXT,published_at TEXT,PRIMARY KEY(week_id,group_key));
