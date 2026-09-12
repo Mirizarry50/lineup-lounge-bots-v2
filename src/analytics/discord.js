@@ -1,3 +1,4 @@
+import {gameParlay} from './game-parlay.js';
 import {exactDay} from './dates.js';
 import {matchSlip} from './slip.js';
 import {shareMessages} from './share.js';
@@ -45,6 +46,11 @@ export function installAnalytics(client,store,api,env){
     const matched=await matchSlip(slate,o.getString('picks'),sport,filter);
     if(!matched.ready){await reply(i,'**Review needed - no analysis run**\n'+matched.results.map((r,n)=>(n+1)+'. '+(r.candidates.length===1?quoteLine(r.candidates[0]):r.candidates.length?'Ambiguous match. Use the full name and a narrower date window: '+r.candidates.slice(0,3).map(quoteLine).join(' | '):'No exact available match. Check the player spelling, market and line.')).join('\n')+'\nCorrect the corresponding pick in your original list and rerun /analyze-slip. Typos and different lines are not substituted.\nCoverage: '+matched.coverage.join('; '));return;}
     const sid=randomUUID();sessions.set(sid,{owner:i.user.id,sport,legs:matched.legs,expires:Date.now()+1800000});await reply(i,'**Confirm your pasted slip**\n'+matched.legs.map(quoteLine).join('\n')+'\nVerify full player names, games, outcomes, lines and sportsbook. Confirmation researches these selections; it places no wager.\nCoverage: '+matched.coverage.join('; '),[row(new ButtonBuilder().setCustomId('fa:'+sid+':confirm-slip').setLabel('Confirm and analyze').setStyle(ButtonStyle.Primary))]);return;
+   }
+   if(n==='parlay'){
+    const ticket=await gameParlay(api,history,sport,{...filter,markets:o.getString('markets')||'h2h',legs:o.getInteger('legs')||4});
+    db.prepare('INSERT INTO parlays(owner,created_at,style,snapshot) VALUES(?,?,?,?)').run(i.user.id,new Date().toISOString(),'game-markets',JSON.stringify(ticket));
+    await reply(i,`**${sport.toUpperCase()} game parlay**\n${ticket.date} (Eastern time only) | ${ticket.markets.join(', ')}\nOne pick per game; every selected market is included.\n`+ticket.legs.map(quoteLine).join('\n')+`\nEstimated Parlay Odds: ${ticket.estimatedAmericanOdds}\n${ticket.warning}\nMarket-price ranking only; no statistical edge claimed.\nResearch: /analyze sport:${sport} quotes:${ticket.legs.map(q=>q.id).join(',')}\n`+DISCLAIMER);await share(i,ticket);return;
    }
    if(n==='prop-parlay'){
     filter.exactDate=true;filter.from=exactDay(filter.from);

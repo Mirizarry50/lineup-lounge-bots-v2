@@ -3,6 +3,8 @@ const labels={player_pass_yds:'pass yds',player_pass_tds:'passing TDs',player_pa
 const clean=v=>String(v??'').replace(/[`\r\n]/g,' ').replace(/@/g,'').replace(/\s+/g,' ').trim().slice(0,80);
 export function shareLeg(q){
  const name=clean(q.description||q.name),outcome=clean(q.name),point=q.point==null?'':String(q.point);
+ if(q.market==='spreads')return `${clean(q.name)} ${Number(q.point)>0?'+':''}${point}`;
+ if(q.market==='totals')return `${clean(q.game)} ${outcome.toLowerCase()} ${point} total points`;
  if(q.market==='h2h')return `${clean(q.name)} ML`;
  if(q.market==='player_anytime_td')return `${name} ${outcome.toLowerCase()==='yes'?'ATTD':outcome.toLowerCase()==='no'?'no anytime TD':outcome}`;
  return `${name} ${outcome.toLowerCase()} ${point} ${labels[q.market]||clean(q.market).replaceAll('_',' ')}`.replace(/\s+/g,' ').trim();
