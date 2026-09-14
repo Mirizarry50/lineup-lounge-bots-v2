@@ -37,13 +37,17 @@ export function providers(env, store) {
     if (event && !/^[a-zA-Z0-9_-]{1,100}$/.test(event)) throw new PublicError('Invalid event ID.');
     if (market.split(',').length>8 || !market.split(',').every(m=>/^(h2h|spreads|totals|(player|batter|pitcher)_[a-z_]{1,60})$/.test(m))) throw new PublicError('Use h2h, spreads, totals, or a supported player_ market key.');
     if (!event && market.split(',').some(m=>/^(player|batter|pitcher)_/.test(m))) throw new PublicError('Player props require an event ID from /games.');
-    return cached(`odds:v2:${sport}:${event ?? ''}:${market}:${book}`, 120_000, async () => {
+    // Provider support confirmed NCAAF Florida prices use the shared main key.
+    // Keep this mapping sport-specific; other sports may have state differences.
+    const sourceBooks=books.map(b=>sport==='cfb'&&b==='hardrockbet_fl'?'hardrockbet':b);
+    return cached(`odds:v3:${sport}:${event ?? ''}:${market}:${book}`, 120_000, async () => {
       for(const m of new Set(market.split(',')))store.take('odds', Number(env.ODDS_DAILY_LIMIT || 120));
       const path = event ? `/events/${encodeURIComponent(event)}/odds` : '/odds';
       const url = new URL(`https://api.the-odds-api.com/v4/sports/${SPORTS[sport].key}${path}`);
-      url.search = new URLSearchParams({ apiKey: env.ODDS_API_KEY, bookmakers: books.join(','), markets: market, oddsFormat: 'american' });
+      url.search = new URLSearchParams({ apiKey: env.ODDS_API_KEY, bookmakers: sourceBooks.join(','), markets: market, oddsFormat: 'american' });
       const data = await (await request(url)).json();
-      const quotes = quotesFrom(Array.isArray(data) ? data : [data], Date.now(), books);
+      const events=(Array.isArray(data)?data:[data]).map(e=>({...e,bookmakers:(e.bookmakers||[]).map(b=>sport==='cfb'&&b.key==='hardrockbet'&&books.includes('hardrockbet_fl')?{...b,key:'hardrockbet_fl'}:b)}));
+      const quotes = quotesFrom(events, Date.now(), books).map(q=>({...q,sourceBook:sport==='cfb'&&q.book==='hardrockbet_fl'?'hardrockbet':q.book}));
       for (const q of quotes) store.cache(`quote:${sport}:${q.id}`, q, 3600_000);
       return quotes;
     });
